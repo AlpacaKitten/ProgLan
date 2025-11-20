@@ -12,12 +12,19 @@ type boolType = bool;
 datatype etype = intType 
     | boolType
     | eTupel of etype list
-    | eFun of etype * etye
+    | eFun of etype * etype;
 
 (*b) Man schreibe eine Funktion toStringType, die einen Ausdruck vom Typ etype in
 einen String umwandelt gem¨aß der Definition von Typen T aus Kap. 3.1 der Vorle-
 sung. Dabei kann die SML-Funktion String.concatWith f¨ur Tupeltypen n¨utzlich
 sein.*)
+
+fun toStringType intType = "int"
+  | toStringType boolType = "bool"
+  | toStringType (eTupel ts) =
+        "(" ^ String.concatWith " * " (map toStringType ts) ^ ")"
+  | toStringType (eFun (t1, t2)) =
+        "(" ^ toStringType t1 ^ " -> " ^ toStringType t2 ^ ")";
 
 (*c) Man definiere einen Datentyp expr f¨ur die abstrakten Syntaxb¨aume der Ausdr¨ucke
 vom Typ EXP R. Die Definition des Datentyps soll m¨oglichst genau die Struktur
