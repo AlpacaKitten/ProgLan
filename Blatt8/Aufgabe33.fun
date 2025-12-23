@@ -68,7 +68,9 @@ datatype expr = Id      of ident
               | App     of expr * expr
               | Abstr   of ident * etype * expr
               | Fix     of ident * etype * expr
-              (* hier ergaenzen *)
+              | seqDis  of expr * expr
+              | seqConj of expr * expr
+              | multAbstr of para list * expr
 
 
 
