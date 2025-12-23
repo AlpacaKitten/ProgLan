@@ -68,9 +68,9 @@ datatype expr = Id      of ident
               | App     of expr * expr
               | Abstr   of ident * etype * expr
               | Fix     of ident * etype * expr
-              | seqDis  of expr * expr
-              | seqConj of expr * expr
-              | multAbstr of para list * expr
+              | OrElse  of expr * expr
+              | AndAlso of expr * expr
+              | MultAbstr of para list * expr
 
 
 
@@ -106,7 +106,27 @@ fun makefresh(x,ids) = let val z = "_" ^ x
 (* preprocess e fuehrt einen Ausdruck e der erweiterten Kernsprache auf 
    einen Ausdruck der Kernsprache zurueck.
 *)
-fun preprocess e = e  (* hier aendern *)
+fun preprocess (Id id) = Id id
+  | preprocess (Const c) = Const c
+  | preprocess (Tupel el) = Tupel (map preprocess el)
+  | preprocess (Sel(i, e)) = Sel(i, preprocess e)
+  | preprocess (App(f, a)) = App(preprocess f, preprocess a)
+  | preprocess (Abstr(x, t, e)) = Abstr(x, t, preprocess e)
+  | preprocess (Fix(x, t, e)) = Fix(x, t, preprocess e)
+  
+  | AndAlso(e1, e2) = Cond(preprocess e1, preprocess e2, Const(BoolConst false))
+  | OrElse(e1, e2) = Cond(preprocess e1, Const(BoolConst true), preprocess e2)
+  | MultAbstr(paras, e) = 
+      let 
+        val e_ = preprocess e
+        val tupelTypes = TupelType (map (fn (_, t) => t) paras)
+        val x = makefresh("x", union(free e_, bound e_))
+        fun substParas (nil, _, e) = e
+          | substParas ((xi, _)::ps, i, e) = substParas(ps, i+1, substitute e xi (Sel(i, Id x)))
+
+      in 
+        Abstr(x, tupelTypes, substParas(paras, 1, e_))
+      end
 
 
 (**************************************
@@ -122,9 +142,9 @@ and bound(Id id)       = nil
   | bound(App(f,a))    = union(bound(f), bound(a))
   | bound(Abstr(x,t,e))= insert(bound(e),x)
   | bound(Fix(x,t,e))  = insert(bound(e),x)
-(*
+
   | bound(ee)          = bound(preprocess ee)
-*)
+
 
 (* free e bestimmt die Menge der freien Bezeichner im Ausdruck e *)
 and free(Id id)        = [id]
@@ -189,9 +209,9 @@ and typecheck env (Id id)              = lookup env id
   | typecheck env (Fix(x,t,e)) = if t = typecheck (insert(env,(x,t))) e
                                  then t
                                  else raise TypeError "Type mismatch in recursion"
-(*
+
   | typecheck env ee = typecheck env (preprocess ee)
-*)
+
 
 
 (**************************************
@@ -228,9 +248,9 @@ and substitute (Id id)          x e = if x=id then e else Id id
                                                  union(bound e1,bound e)))
                   in Fix(z,t,substitute (substitute e1 i (Id z)) x e)
                   end
-(*
+
   | substitute ee x e = substitute (preprocess ee) x e
-*)
+
 
 
 
@@ -284,7 +304,7 @@ fun toString(Id(id)):string          = id
         "(fn " ^ id ^ " : " ^ toStringType(t) ^ " => " ^ toString(e) ^ ")"
   | toString(Fix(id,t,e))            = 
         "(fix " ^ id ^ " : " ^ toStringType(t) ^ " => " ^ toString(e) ^ ")"
-(*
+
   | toString(e)                      = toString(preprocess e)
-*)
+
 ;
